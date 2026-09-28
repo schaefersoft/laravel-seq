@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static void flush()
+ * @method static \Illuminate\Http\Client\Factory fake(callable|array<string, mixed>|null $responses = null)
  * @method static \Illuminate\Http\Client\Factory http()
  *
  * @see \SchaeferSoft\Seq\Seq

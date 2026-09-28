@@ -36,4 +36,12 @@ final class Seq
             $handler->flush();
         }
     }
+
+    /**
+     * @param  callable|array<string, mixed>|null  $responses
+     */
+    public function fake(callable|array|null $responses = null): Factory
+    {
+        return $this->http->fake($responses ?? static fn () => Factory::response(status: 201));
+    }
 }
