@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+namespace SchaeferSoft\Seq\Tests\Fixtures;
+
+enum Priority
+{
+    case High;
+}
