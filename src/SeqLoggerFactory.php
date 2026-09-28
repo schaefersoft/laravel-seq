@@ -45,6 +45,8 @@ final class SeqLoggerFactory
             $handler->pushProcessor($processor);
         }
 
+        $this->seq->track($handler);
+
         return $logger->pushHandler($handler);
     }
 

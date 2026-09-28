@@ -6,8 +6,11 @@ namespace SchaeferSoft\Seq;
 
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
 use Illuminate\Log\LogManager;
+use Illuminate\Queue\Events\Looping;
+use Illuminate\Queue\Events\WorkerStopping;
 use Illuminate\Support\ServiceProvider;
 use Monolog\Logger;
 
@@ -30,6 +33,14 @@ final class SeqServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->app->terminating(function (): void {
+            $this->app->make(Seq::class)->flush();
+        });
+
+        $this->app->make(Dispatcher::class)->listen([Looping::class, WorkerStopping::class], function (): void {
+            $this->app->make(Seq::class)->flush();
+        });
+
         if ($this->app->runningInConsole()) {
             $this->publishes([
                 __DIR__.'/../config/seq.php' => $this->app->configPath('seq.php'),
