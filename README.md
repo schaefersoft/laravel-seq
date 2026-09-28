@@ -278,10 +278,9 @@ composer analyse
 composer format
 ```
 
-The integration tests run against a real Seq server:
+The integration tests run against a real Seq server, for example the container from [Running Seq locally](#running-seq-locally):
 
 ```bash
-docker compose up -d
 SEQ_INTEGRATION_URL=http://localhost:5341 composer test
 ```
 
