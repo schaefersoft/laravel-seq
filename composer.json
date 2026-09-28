@@ -1,0 +1,73 @@
+{
+    "name": "schaefersoft/laravel-seq",
+    "description": "Structured logging to Seq for Laravel. Ships batched CLEF events after the response is sent.",
+    "keywords": [
+        "laravel",
+        "seq",
+        "datalust",
+        "logging",
+        "monolog",
+        "clef",
+        "structured-logging"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/schaefersoft/laravel-seq",
+    "authors": [
+        {
+            "name": "Luca Schäfer",
+            "email": "lschaefer@schaefersoft.ch",
+            "homepage": "https://schaefersoft.ch"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^12.0|^13.0",
+        "illuminate/contracts": "^12.0|^13.0",
+        "illuminate/http": "^12.0|^13.0",
+        "illuminate/log": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0",
+        "monolog/monolog": "^3.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0|^5.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "SchaeferSoft\\Seq\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SchaeferSoft\\Seq\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SchaeferSoft\\Seq\\SeqServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "test:coverage": "pest --coverage --min=90",
+        "analyse": "phpstan analyse",
+        "format": "pint",
+        "format:check": "pint --test"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
