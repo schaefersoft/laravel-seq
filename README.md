@@ -34,7 +34,7 @@ your application.
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10, 11, 12 or 13
+- Laravel 12 or 13
 - Seq 2023.4+
 
 ## Installation
@@ -54,13 +54,11 @@ SEQ_URL=https://seq.example.com
 SEQ_API_KEY=your-api-key
 ```
 
-Add the `seq` channel to your log stack. On Laravel 11 and newer this is a single environment variable:
+Add the `seq` channel to your log stack:
 
 ```dotenv
 LOG_STACK=daily,seq
 ```
-
-On Laravel 10, add `seq` to the `channels` of the `stack` channel in `config/logging.php`.
 
 Check that everything works:
 

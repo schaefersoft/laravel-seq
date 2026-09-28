@@ -85,7 +85,7 @@ it('includes data from the context repository', function () {
     Seq::flush();
 
     expect(sentEvents($http)[0])->toMatchArray(['trace_id' => 'trace-1']);
-})->skip(! class_exists(Context::class), 'The context repository requires Laravel 11 or newer.');
+});
 
 it('respects the configured level', function () {
     config()->set('seq.level', 'warning');
