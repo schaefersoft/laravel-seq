@@ -8,11 +8,14 @@ use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\CachesConfiguration;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Log\LogManager;
 use Illuminate\Queue\Events\Looping;
 use Illuminate\Queue\Events\WorkerStopping;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 use Monolog\Logger;
+use SchaeferSoft\Seq\Commands\TestConnectionCommand;
 
 final class SeqServiceProvider extends ServiceProvider
 {
@@ -45,6 +48,12 @@ final class SeqServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__.'/../config/seq.php' => $this->app->configPath('seq.php'),
             ], 'seq-config');
+
+            $this->commands([
+                TestConnectionCommand::class,
+            ]);
+
+            $this->registerAboutSection();
         }
     }
 
@@ -59,5 +68,29 @@ final class SeqServiceProvider extends ServiceProvider
         if (! $config->has('logging.channels.seq')) {
             $config->set('logging.channels.seq', ['driver' => 'seq']);
         }
+    }
+
+    private function registerAboutSection(): void
+    {
+        if (! class_exists(AboutCommand::class)) {
+            return;
+        }
+
+        AboutCommand::add('Seq', static function (Repository $config): array {
+            $values = $config->get('seq', []);
+
+            try {
+                $settings = SeqConfig::fromArray(is_array($values) ? $values : []);
+            } catch (InvalidArgumentException $e) {
+                return ['Configuration' => $e->getMessage()];
+            }
+
+            return [
+                'Enabled' => $settings->isActive() ? 'ENABLED' : 'DISABLED',
+                'URL' => $settings->url ?? '-',
+                'API Key' => $settings->apiKey !== null ? 'SET' : 'NOT SET',
+                'Level' => $settings->level->getName(),
+            ];
+        });
     }
 }
