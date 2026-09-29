@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0](https://github.com/schaefersoft/laravel-seq/compare/v1.0.0...v2.0.0) (2026-09-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* ship nothing without a configured seq url
+
+### Features
+
+* pause shipping with a circuit breaker while seq is unreachable ([779b099](https://github.com/schaefersoft/laravel-seq/commit/779b09928c1781dcaef5f1c254a9c44fdbd1c084))
+* ship nothing without a configured seq url ([6f9e1ec](https://github.com/schaefersoft/laravel-seq/commit/6f9e1ece701b45ca3d4b1912147bc1f93ddb4567))
+
 ## 1.0.0 (2026-09-28)
 
 
