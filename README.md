@@ -47,7 +47,7 @@ The service provider is discovered automatically.
 
 ## Quick start
 
-Point the package to your Seq server:
+Point the package to your Seq server. Without `SEQ_URL`, nothing is shipped:
 
 ```dotenv
 SEQ_URL=https://seq.example.com
@@ -70,7 +70,7 @@ php artisan seq:test
 
 | Variable              | Default                   | Description                                                                 |
 |-----------------------|---------------------------|-----------------------------------------------------------------------------|
-| `SEQ_URL`             | `http://localhost:5341`   | Base URL of your Seq server                                                 |
+| `SEQ_URL`             | –                         | Base URL of your Seq server, nothing is shipped without it                  |
 | `SEQ_API_KEY`         | –                         | API key, sent as `X-Seq-ApiKey` header                                      |
 | `SEQ_ENABLED`         | `true`                    | Set to `false` to stop shipping events                                      |
 | `SEQ_LEVEL`           | `LOG_LEVEL` or `debug`    | Minimum level shipped to Seq                                                |
@@ -266,7 +266,7 @@ $http->assertSent(fn (Request $request) => str_contains($request->body(), '"orde
 docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_NOAUTHENTICATION=true -p 5341:80 datalust/seq
 ```
 
-Seq is then available at [http://localhost:5341](http://localhost:5341), which is the default `SEQ_URL`.
+Seq is then available at [http://localhost:5341](http://localhost:5341). Set `SEQ_URL=http://localhost:5341` to ship to it.
 
 ## Development
 

@@ -146,6 +146,12 @@ it('does not ship anything when seq is disabled', function (array $config) {
     'without url' => [['url' => null]],
 ]);
 
+it('has no seq url by default', function () {
+    $defaults = require __DIR__.'/../../config/seq.php';
+
+    expect($defaults['url'])->toBeNull();
+});
+
 it('keeps the other channels of a stack working', function (array $config) {
     config()->set('seq', [...config('seq'), ...$config]);
     config()->set('logging.channels.memory', ['driver' => 'monolog', 'handler' => TestHandler::class]);

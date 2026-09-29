@@ -6,7 +6,7 @@ return [
 
     'enabled' => env('SEQ_ENABLED', true),
 
-    'url' => env('SEQ_URL', 'http://localhost:5341'),
+    'url' => env('SEQ_URL'),
 
     'api_key' => env('SEQ_API_KEY'),
 
