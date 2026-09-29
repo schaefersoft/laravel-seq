@@ -22,6 +22,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "illuminate/cache": "^12.0|^13.0",
         "illuminate/console": "^12.0|^13.0",
         "illuminate/contracts": "^12.0|^13.0",
         "illuminate/http": "^12.0|^13.0",

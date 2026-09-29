@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace SchaeferSoft\Seq;
 
+use Illuminate\Contracts\Cache\Factory as CacheFactory;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Container\Container;
 use InvalidArgumentException;
@@ -31,12 +33,17 @@ final class SeqLoggerFactory
             return $logger->pushHandler(new NoopHandler);
         }
 
+        $client = $settings->client($this->seq->http());
+
         $handler = new SeqHandler(
-            $settings->client($this->seq->http()),
+            $client,
             $settings->level,
             $settings->bubble,
             $settings->batchSize,
             $settings->flushInterval,
+            $settings->circuitBreaker > 0
+                ? CircuitBreaker::for($client, $this->circuitBreakerCache($settings), $settings->circuitBreaker)
+                : null,
         );
 
         $handler->setFormatter($settings->formatter());
@@ -48,6 +55,13 @@ final class SeqLoggerFactory
         $this->seq->track($handler);
 
         return $logger->pushHandler($handler);
+    }
+
+    private function circuitBreakerCache(SeqConfig $settings): CacheRepository
+    {
+        return $settings->circuitBreakerStore === null
+            ? $this->seq->circuitBreakerCache()
+            : $this->container->make(CacheFactory::class)->store($settings->circuitBreakerStore);
     }
 
     /**

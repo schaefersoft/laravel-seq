@@ -28,6 +28,7 @@ your application.
 - `Log::withContext()`, `Log::shareContext()` and Laravel's `Context` are shipped as properties
 - Batched delivery after the response, between queue jobs and when a process ends, even after fatal errors
 - Short timeouts, and delivery failures never reach your application
+- A circuit breaker pauses shipping while Seq is unreachable, so requests and workers are not held up
 - Oversized events are trimmed instead of failing the whole batch
 - `php artisan seq:test` to verify the connection and `Seq::fake()` for your own tests
 
@@ -68,17 +69,19 @@ php artisan seq:test
 
 ## Configuration
 
-| Variable              | Default                   | Description                                                                 |
-|-----------------------|---------------------------|-----------------------------------------------------------------------------|
-| `SEQ_URL`             | –                         | Base URL of your Seq server, nothing is shipped without it                  |
-| `SEQ_API_KEY`         | –                         | API key, sent as `X-Seq-ApiKey` header                                      |
-| `SEQ_ENABLED`         | `true`                    | Set to `false` to stop shipping events                                      |
-| `SEQ_LEVEL`           | `LOG_LEVEL` or `debug`    | Minimum level shipped to Seq                                                |
-| `SEQ_TIMEOUT`         | `2`                       | Request timeout in seconds                                                  |
-| `SEQ_CONNECT_TIMEOUT` | `1`                       | Connection timeout in seconds                                               |
-| `SEQ_BATCH_SIZE`      | `100`                     | Maximum number of events per request                                        |
-| `SEQ_FLUSH_INTERVAL`  | `5`                       | Maximum age in seconds of buffered events in long-running processes, `0` disables it |
-| `SEQ_MAX_EVENT_SIZE`  | `262144`                  | Maximum event size in bytes, matching Seq's default                         |
+| Variable                    | Default                | Description                                                                          |
+|-----------------------------|------------------------|--------------------------------------------------------------------------------------|
+| `SEQ_URL`                   | –                      | Base URL of your Seq server, nothing is shipped without it                           |
+| `SEQ_API_KEY`               | –                      | API key, sent as `X-Seq-ApiKey` header                                               |
+| `SEQ_ENABLED`               | `true`                 | Set to `false` to stop shipping events                                               |
+| `SEQ_LEVEL`                 | `LOG_LEVEL` or `debug` | Minimum level shipped to Seq                                                         |
+| `SEQ_TIMEOUT`               | `2`                    | Request timeout in seconds                                                           |
+| `SEQ_CONNECT_TIMEOUT`       | `1`                    | Connection timeout in seconds                                                        |
+| `SEQ_BATCH_SIZE`            | `100`                  | Maximum number of events per request                                                 |
+| `SEQ_FLUSH_INTERVAL`        | `5`                    | Maximum age in seconds of buffered events in long-running processes, `0` disables it |
+| `SEQ_MAX_EVENT_SIZE`        | `262144`               | Maximum event size in bytes, matching Seq's default                                  |
+| `SEQ_CIRCUIT_BREAKER`       | `30`                   | Seconds to pause shipping after Seq could not be reached, `0` disables it            |
+| `SEQ_CIRCUIT_BREAKER_STORE` | –                      | Cache store for the circuit breaker state, see [Failures](#failures)                 |
 
 Publish the configuration file to change the defaults:
 
@@ -214,6 +217,19 @@ Requests use short timeouts. Delivery errors are swallowed and the affected even
 and never blocks longer than the timeouts. After a connection failure, the remaining batches of that flush are dropped
 instead of waiting for more timeouts. Keep a local channel in your stack, like `LOG_STACK=daily,seq`, to not lose any
 events, and run `php artisan seq:test` to find out what is wrong.
+
+When Seq cannot be reached or does not answer in time, a circuit breaker pauses shipping for `SEQ_CIRCUIT_BREAKER`
+seconds and drops the events of that time. Otherwise every request would wait for the timeouts, and under load the
+PHP-FPM pool would fill up. Error responses from Seq do not trip the circuit breaker. Its state is kept per Seq server:
+
+| Runtime                          | State is kept in                                   |
+|----------------------------------|----------------------------------------------------|
+| PHP-FPM with APCu                | APCu, shared by all workers of the pool            |
+| Octane, queue workers, commands  | Memory of the process                              |
+| `SEQ_CIRCUIT_BREAKER_STORE` set  | The Laravel cache store of that name, like `redis` |
+
+Without APCu, PHP-FPM forgets the state after every request. Install APCu or set `SEQ_CIRCUIT_BREAKER_STORE` to a
+cache store that responds quickly, since it is queried before every delivery.
 
 ### Large events
 

@@ -22,6 +22,10 @@ return [
 
     'max_event_size' => env('SEQ_MAX_EVENT_SIZE', 262144),
 
+    'circuit_breaker' => env('SEQ_CIRCUIT_BREAKER', 30),
+
+    'circuit_breaker_store' => env('SEQ_CIRCUIT_BREAKER_STORE'),
+
     'properties' => [
         'Application' => env('APP_NAME', 'Laravel'),
         'Environment' => env('APP_ENV', 'production'),

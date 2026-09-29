@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Monolog\Level;
 use Monolog\LogRecord;
+use SchaeferSoft\Seq\CircuitBreaker;
 use SchaeferSoft\Seq\ClefFormatter;
 use SchaeferSoft\Seq\SeqClient;
 use SchaeferSoft\Seq\SeqHandler;
@@ -71,12 +72,14 @@ function seqHandler(
     Level $level = Level::Debug,
     int $batchSize = 100,
     float $flushInterval = 5.0,
+    ?CircuitBreaker $circuitBreaker = null,
 ): SeqHandler {
     return new SeqHandler(
         new SeqClient($http, 'https://seq.test', $apiKey),
         $level,
         batchSize: $batchSize,
         flushInterval: $flushInterval,
+        circuitBreaker: $circuitBreaker,
     );
 }
 
