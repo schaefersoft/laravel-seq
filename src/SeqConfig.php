@@ -25,6 +25,8 @@ final class SeqConfig
         public readonly int $batchSize = 100,
         public readonly float $flushInterval = 5.0,
         public readonly int $maxEventSize = ClefFormatter::DEFAULT_MAX_EVENT_SIZE,
+        public readonly int $circuitBreaker = 30,
+        public readonly ?string $circuitBreakerStore = null,
         public readonly array $properties = [],
     ) {}
 
@@ -46,6 +48,8 @@ final class SeqConfig
             batchSize: self::integer($config['batch_size'] ?? null, 100),
             flushInterval: self::float($config['flush_interval'] ?? null, 5.0),
             maxEventSize: self::integer($config['max_event_size'] ?? null, ClefFormatter::DEFAULT_MAX_EVENT_SIZE),
+            circuitBreaker: max(0, self::integer($config['circuit_breaker'] ?? null, 30)),
+            circuitBreakerStore: self::string($config['circuit_breaker_store'] ?? null),
             properties: is_array($properties) ? array_filter($properties, fn (mixed $value): bool => $value !== null) : [],
         );
     }

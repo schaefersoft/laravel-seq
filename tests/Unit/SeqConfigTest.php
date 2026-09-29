@@ -17,6 +17,8 @@ it('parses values coming from the environment', function () {
         'batch_size' => '50',
         'flush_interval' => '0',
         'max_event_size' => '131072',
+        'circuit_breaker' => '10',
+        'circuit_breaker_store' => 'redis',
         'properties' => ['Application' => 'Shop', 'Region' => null],
     ]);
 
@@ -31,6 +33,8 @@ it('parses values coming from the environment', function () {
         'batchSize' => 50,
         'flushInterval' => 0.0,
         'maxEventSize' => 131072,
+        'circuitBreaker' => 10,
+        'circuitBreakerStore' => 'redis',
         'properties' => ['Application' => 'Shop'],
     ]);
 });
@@ -47,6 +51,8 @@ it('falls back to defaults for missing values', function () {
         'batchSize' => 100,
         'flushInterval' => 5.0,
         'maxEventSize' => 262144,
+        'circuitBreaker' => 30,
+        'circuitBreakerStore' => null,
         'properties' => [],
     ]);
 });

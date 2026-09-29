@@ -4,12 +4,19 @@ declare(strict_types=1);
 
 namespace SchaeferSoft\Seq;
 
+use Illuminate\Cache\ApcStore;
+use Illuminate\Cache\ApcWrapper;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository as CacheRepository;
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Http\Client\Factory;
 use WeakMap;
 
 final class Seq
 {
     private readonly Factory $http;
+
+    private ?Repository $circuitBreakerCache = null;
 
     /** @var WeakMap<SeqHandler, true> */
     private readonly WeakMap $handlers;
@@ -23,6 +30,13 @@ final class Seq
     public function http(): Factory
     {
         return $this->http;
+    }
+
+    public function circuitBreakerCache(): Repository
+    {
+        return $this->circuitBreakerCache ??= new CacheRepository(
+            function_exists('apcu_enabled') && apcu_enabled() ? new ApcStore(new ApcWrapper) : new ArrayStore,
+        );
     }
 
     public function track(SeqHandler $handler): void

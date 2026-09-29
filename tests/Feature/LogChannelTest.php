@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Monolog\Handler\NoopHandler;
@@ -17,7 +18,7 @@ use SchaeferSoft\Seq\SeqServiceProvider;
 it('merges the package configuration', function () {
     expect(config('seq'))->toHaveKeys([
         'enabled', 'url', 'api_key', 'level', 'timeout', 'connect_timeout',
-        'batch_size', 'flush_interval', 'max_event_size', 'properties',
+        'batch_size', 'flush_interval', 'max_event_size', 'circuit_breaker', 'circuit_breaker_store', 'properties',
     ]);
 });
 
@@ -145,6 +146,72 @@ it('does not ship anything when seq is disabled', function (array $config) {
     'disabled' => [['enabled' => false]],
     'without url' => [['url' => null]],
 ]);
+
+it('has no seq url by default', function () {
+    $defaults = require __DIR__.'/../../config/seq.php';
+
+    expect($defaults['url'])->toBeNull();
+});
+
+it('pauses shipping after seq could not be reached', function () {
+    $attempts = 0;
+    Seq::fake(function () use (&$attempts) {
+        $attempts++;
+
+        throw new ConnectionException('Seq is down');
+    });
+
+    Log::channel('seq')->info('First');
+    Seq::flush();
+    Log::channel('seq')->info('Second');
+    Seq::flush();
+
+    expect($attempts)->toBe(1);
+});
+
+it('shares the circuit breaker between channels of the same seq server', function () {
+    config()->set('logging.channels.audit', ['driver' => 'seq']);
+    $attempts = 0;
+    Seq::fake(function () use (&$attempts) {
+        $attempts++;
+
+        throw new ConnectionException('Seq is down');
+    });
+
+    Log::channel('seq')->info('First');
+    Seq::flush();
+    Log::channel('audit')->info('Second');
+    Seq::flush();
+
+    expect($attempts)->toBe(1);
+});
+
+it('keeps shipping after failures when the circuit breaker is disabled', function () {
+    config()->set('seq.circuit_breaker', 0);
+    $attempts = 0;
+    Seq::fake(function () use (&$attempts) {
+        $attempts++;
+
+        throw new ConnectionException('Seq is down');
+    });
+
+    Log::channel('seq')->info('First');
+    Seq::flush();
+    Log::channel('seq')->info('Second');
+    Seq::flush();
+
+    expect($attempts)->toBe(2);
+});
+
+it('keeps the circuit breaker state in the configured cache store', function () {
+    config()->set('seq.circuit_breaker_store', 'array');
+    Seq::fake(fn () => throw new ConnectionException('Seq is down'));
+
+    Log::channel('seq')->info('Hello');
+    Seq::flush();
+
+    expect(Cache::store('array')->has('seq-circuit-breaker:'.sha1('https://seq.test/ingest/clef')))->toBeTrue();
+});
 
 it('keeps the other channels of a stack working', function (array $config) {
     config()->set('seq', [...config('seq'), ...$config]);

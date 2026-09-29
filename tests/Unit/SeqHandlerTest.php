@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 use Monolog\Formatter\NormalizerFormatter;
 use Monolog\Level;
+use SchaeferSoft\Seq\CircuitBreaker;
 use SchaeferSoft\Seq\ClefFormatter;
 use SchaeferSoft\Seq\SeqHandler;
 
@@ -134,6 +137,42 @@ it('stops sending the remaining payloads after a connection failure', function (
     $handler->flush();
 
     expect($attempts)->toBe(1);
+});
+
+it('stops sending for the cooldown after a connection failure', function () {
+    $attempts = 0;
+    $http = (new Factory)->fake(function () use (&$attempts) {
+        $attempts++;
+
+        throw new ConnectionException('Operation timed out');
+    });
+    $handler = seqHandler($http, circuitBreaker: new CircuitBreaker(new Repository(new ArrayStore), 'seq', 30));
+
+    $handler->handle(logRecord('First'));
+    $handler->flush();
+    $handler->handle(logRecord('Second'));
+    $handler->flush();
+
+    expect($attempts)->toBe(1);
+
+    $this->travel(30)->seconds();
+    $handler->handle(logRecord('Third'));
+    $handler->flush();
+
+    expect($attempts)->toBe(2);
+});
+
+it('does not trip the circuit breaker on error responses', function () {
+    $http = new Factory;
+    $http->fake(['*' => $http->sequence()->push('Internal Server Error', 500)->push('', 201)]);
+    $handler = seqHandler($http, circuitBreaker: new CircuitBreaker(new Repository(new ArrayStore), 'seq', 30));
+
+    $handler->handle(logRecord('First'));
+    $handler->flush();
+    $handler->handle(logRecord('Second'));
+    $handler->flush();
+
+    expect($http->recorded())->toHaveCount(2);
 });
 
 it('keeps sending the remaining payloads after an error response', function () {

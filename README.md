@@ -28,6 +28,7 @@ your application.
 - `Log::withContext()`, `Log::shareContext()` and Laravel's `Context` are shipped as properties
 - Batched delivery after the response, between queue jobs and when a process ends, even after fatal errors
 - Short timeouts, and delivery failures never reach your application
+- A circuit breaker pauses shipping while Seq is unreachable, so requests and workers are not held up
 - Oversized events are trimmed instead of failing the whole batch
 - `php artisan seq:test` to verify the connection and `Seq::fake()` for your own tests
 
@@ -47,7 +48,7 @@ The service provider is discovered automatically.
 
 ## Quick start
 
-Point the package to your Seq server:
+Point the package to your Seq server. Without `SEQ_URL`, nothing is shipped:
 
 ```dotenv
 SEQ_URL=https://seq.example.com
@@ -68,17 +69,19 @@ php artisan seq:test
 
 ## Configuration
 
-| Variable              | Default                   | Description                                                                 |
-|-----------------------|---------------------------|-----------------------------------------------------------------------------|
-| `SEQ_URL`             | `http://localhost:5341`   | Base URL of your Seq server                                                 |
-| `SEQ_API_KEY`         | –                         | API key, sent as `X-Seq-ApiKey` header                                      |
-| `SEQ_ENABLED`         | `true`                    | Set to `false` to stop shipping events                                      |
-| `SEQ_LEVEL`           | `LOG_LEVEL` or `debug`    | Minimum level shipped to Seq                                                |
-| `SEQ_TIMEOUT`         | `2`                       | Request timeout in seconds                                                  |
-| `SEQ_CONNECT_TIMEOUT` | `1`                       | Connection timeout in seconds                                               |
-| `SEQ_BATCH_SIZE`      | `100`                     | Maximum number of events per request                                        |
-| `SEQ_FLUSH_INTERVAL`  | `5`                       | Maximum age in seconds of buffered events in long-running processes, `0` disables it |
-| `SEQ_MAX_EVENT_SIZE`  | `262144`                  | Maximum event size in bytes, matching Seq's default                         |
+| Variable                    | Default                | Description                                                                          |
+|-----------------------------|------------------------|--------------------------------------------------------------------------------------|
+| `SEQ_URL`                   | –                      | Base URL of your Seq server, nothing is shipped without it                           |
+| `SEQ_API_KEY`               | –                      | API key, sent as `X-Seq-ApiKey` header                                               |
+| `SEQ_ENABLED`               | `true`                 | Set to `false` to stop shipping events                                               |
+| `SEQ_LEVEL`                 | `LOG_LEVEL` or `debug` | Minimum level shipped to Seq                                                         |
+| `SEQ_TIMEOUT`               | `2`                    | Request timeout in seconds                                                           |
+| `SEQ_CONNECT_TIMEOUT`       | `1`                    | Connection timeout in seconds                                                        |
+| `SEQ_BATCH_SIZE`            | `100`                  | Maximum number of events per request                                                 |
+| `SEQ_FLUSH_INTERVAL`        | `5`                    | Maximum age in seconds of buffered events in long-running processes, `0` disables it |
+| `SEQ_MAX_EVENT_SIZE`        | `262144`               | Maximum event size in bytes, matching Seq's default                                  |
+| `SEQ_CIRCUIT_BREAKER`       | `30`                   | Seconds to pause shipping after Seq could not be reached, `0` disables it            |
+| `SEQ_CIRCUIT_BREAKER_STORE` | –                      | Cache store for the circuit breaker state, see [Failures](#failures)                 |
 
 Publish the configuration file to change the defaults:
 
@@ -215,6 +218,19 @@ and never blocks longer than the timeouts. After a connection failure, the remai
 instead of waiting for more timeouts. Keep a local channel in your stack, like `LOG_STACK=daily,seq`, to not lose any
 events, and run `php artisan seq:test` to find out what is wrong.
 
+When Seq cannot be reached or does not answer in time, a circuit breaker pauses shipping for `SEQ_CIRCUIT_BREAKER`
+seconds and drops the events of that time. Otherwise every request would wait for the timeouts, and under load the
+PHP-FPM pool would fill up. Error responses from Seq do not trip the circuit breaker. Its state is kept per Seq server:
+
+| Runtime                          | State is kept in                                   |
+|----------------------------------|----------------------------------------------------|
+| PHP-FPM with APCu                | APCu, shared by all workers of the pool            |
+| Octane, queue workers, commands  | Memory of the process                              |
+| `SEQ_CIRCUIT_BREAKER_STORE` set  | The Laravel cache store of that name, like `redis` |
+
+Without APCu, PHP-FPM forgets the state after every request. Install APCu or set `SEQ_CIRCUIT_BREAKER_STORE` to a
+cache store that responds quickly, since it is queried before every delivery.
+
 ### Large events
 
 Seq rejects events larger than 256 KB and requests larger than 10 MB, and a single rejected event makes it reject the
@@ -266,7 +282,7 @@ $http->assertSent(fn (Request $request) => str_contains($request->body(), '"orde
 docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -e SEQ_FIRSTRUN_NOAUTHENTICATION=true -p 5341:80 datalust/seq
 ```
 
-Seq is then available at [http://localhost:5341](http://localhost:5341), which is the default `SEQ_URL`.
+Seq is then available at [http://localhost:5341](http://localhost:5341). Set `SEQ_URL=http://localhost:5341` to ship to it.
 
 ## Development
 

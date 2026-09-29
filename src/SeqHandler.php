@@ -32,6 +32,7 @@ final class SeqHandler extends AbstractProcessingHandler
         bool $bubble = true,
         int $batchSize = 100,
         private readonly float $flushInterval = 5.0,
+        private readonly ?CircuitBreaker $circuitBreaker = null,
     ) {
         parent::__construct($level, $bubble);
 
@@ -53,16 +54,22 @@ final class SeqHandler extends AbstractProcessingHandler
             return;
         }
 
-        $this->flushing = true;
         $events = $this->buffer;
         $this->buffer = [];
         $this->bufferedSince = null;
+
+        if ($this->circuitBreaker?->isOpen()) {
+            return;
+        }
+
+        $this->flushing = true;
 
         try {
             foreach ($this->payloads($events) as $payload) {
                 $this->client->send($payload);
             }
         } catch (Throwable) {
+            $this->circuitBreaker?->trip();
         } finally {
             $this->flushing = false;
         }
